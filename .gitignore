@@ -1,0 +1,8 @@
+build/
+.pio/
+/.idea/
+/.vscode/
+# Real device secrets, copied from PanelSecrets.example.h
+PanelSecrets.h
+# macOS Finder metadata
+.DS_Store
