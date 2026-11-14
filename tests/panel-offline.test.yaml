@@ -1,0 +1,21 @@
+# Wokwi CI scenario: the panel joins Wi-Fi, keeps retrying when no Edge API answers,
+# and stays in NO CONNECTION with every state LED off.
+name: Panel offline
+version: 1
+author: SmartFarm
+
+steps:
+  - wait-serial: '[wifi] connected'
+  - wait-serial: 'alert listing failed'
+  - expect-pin:
+      part-id: esp
+      pin: 25
+      value: 0
+  - expect-pin:
+      part-id: esp
+      pin: 26
+      value: 0
+  - expect-pin:
+      part-id: esp
+      pin: 27
+      value: 0
