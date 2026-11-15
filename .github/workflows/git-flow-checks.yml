@@ -107,7 +107,6 @@ jobs:
       PORT: "5000"
       SEED_DEVELOPMENT_DATA: "true"
       CLOUD_API_BASE_URL: ""
-      DATABASE_PATH: ${{ runner.temp }}/edge.db
       PANEL_DEVICE_ID: bf6c7b5d-5c8a-4ba6-8fcc-6a7b8c9daeb5
       COLLAR_DEVICE_ID: 9d4a5f3b-3a6e-4f84-8daa-4e5f6a7b8c93
     steps:
@@ -138,6 +137,8 @@ jobs:
           key="$(openssl rand -hex 16)"
           echo "::add-mask::$key"
           echo "DEVELOPMENT_DEVICE_API_KEY=$key" >> "$GITHUB_ENV"
+          # The runner context is not available in job-level env, so the path is set here.
+          echo "DATABASE_PATH=$RUNNER_TEMP/edge.db" >> "$GITHUB_ENV"
 
       - name: Seed the rules and the collar assignment
         if: env.WOKWI_CLI_TOKEN != ''
