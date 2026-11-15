@@ -111,6 +111,10 @@ The program prints `all alert status checks passed` and exits with 0 when every 
 
 `diagram.json` wires the parts of the hardware table to the board. The LCD uses the I2C mode of the Wokwi part, whose default address is 0x27. The Wokwi buzzer sounds when its positive pin is driven HIGH.
 
+**Wokwi CI.** Every pull request simulates the panel with `tests/panel-offline.test.yaml`. No Edge API is reachable there, so the scenario checks the Wi-Fi connection, the retry and the NO CONNECTION state with its LEDs off.
+
+**Wokwi CI, end to end.** The `end-to-end` job starts the Edge API on the runner with a throwaway device key, seeds the development rules and raises a Critical alert with the collar simulator. The simulated panel cannot reach the runner's localhost, so it connects through a public `bore.pub` TCP tunnel, and `tests/panel-urgent.test.yaml` checks that it shows `URGENT`, sounds the buzzer and lights the red LED.
+
 **How to check the panel.** Start the Edge API locally with the development seed and run the collar simulator in fever mode from the `ichu-edge-service` folder:
 
 ```sh
