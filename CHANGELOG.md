@@ -9,6 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ### Added
 
 - Wokwi CI scenario `tests/panel-offline.test.yaml`, run on every pull request, which checks that the panel joins Wi-Fi and stays in NO CONNECTION with its LEDs off when no Edge API answers.
+- End-to-end Wokwi job `end-to-end` in the Git Flow checks, which runs the panel against a real Edge API and checks that a Critical alert shows `URGENT`, sounds the buzzer and lights the red LED.
 
 ## [0.1.0] - 2026-11-14
 
