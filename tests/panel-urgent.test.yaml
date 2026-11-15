@@ -1,0 +1,14 @@
+# Wokwi CI scenario: the panel polls a real Edge API that holds a Critical alert and shows URGENT,
+# with the buzzer sounding and the red LED lit.
+name: Panel urgent
+version: 1
+author: SmartFarm
+
+steps:
+  - wait-serial: '[wifi] connected'
+  - wait-serial: '[status] URGENT'
+  - wait-serial: '[alarm] buzzer started'
+  - expect-pin:
+      part-id: esp
+      pin: 27
+      value: 1
