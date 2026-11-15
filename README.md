@@ -41,7 +41,7 @@ ichu-alert-panel-embedded-app/
 ├── diagram.json               Wokwi circuit
 ├── libraries.txt              Wokwi library list
 ├── wokwi.toml                 Wokwi for VS Code configuration
-├── wokwi-project.txt          Wokwi project link (pending)
+├── wokwi-project.txt          Wokwi project link
 ├── tests/alert_status_test.cpp host check of the state rules
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
@@ -107,7 +107,7 @@ The program prints `all alert status checks passed` and exits with 0 when every 
 
 **Wokwi for VS Code.** `wokwi.toml` points to `build/sketch.ino.bin` and `build/sketch.ino.elf`, which the build above produces.
 
-**Wokwi web editor.** The project link will be recorded in `wokwi-project.txt` once the team publishes it.
+**Wokwi web editor.** Open the published project at <https://wokwi.com/projects/480787196915608577>. The web editor shows the circuit and runs the firmware, but it reaches a local Edge API only with a paid private gateway, so the connected demo runs in Wokwi for VS Code.
 
 `diagram.json` wires the parts of the hardware table to the board. The LCD uses the I2C mode of the Wokwi part, whose default address is 0x27. The Wokwi buzzer sounds when its positive pin is driven HIGH.
 
