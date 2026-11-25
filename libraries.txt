@@ -2,4 +2,5 @@
 # See https://docs.wokwi.com/guides/libraries
 
 ArduinoJson
-LiquidCrystal I2C
+Modest-IoT-Nano-Framework
+MQTT

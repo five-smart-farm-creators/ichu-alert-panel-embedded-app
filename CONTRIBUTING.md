@@ -13,7 +13,7 @@ This guide covers how to set up, change, review and release the ICHU Alert Panel
 
 ```sh
 arduino-cli core install esp32:esp32@3.3.4
-arduino-cli lib install ArduinoJson "LiquidCrystal I2C"
+arduino-cli lib install ArduinoJson "Modest-IoT-Nano-Framework@1.3.0" MQTT
 git config core.hooksPath .githooks
 ```
 
@@ -25,10 +25,10 @@ arduino-cli compile --fqbn esp32:esp32:esp32 --warnings all --output-dir build p
 
 ## Project structure and code quality
 
-- One class per responsibility in PascalCase files with include guards: the Edge client (Wi-Fi, HTTP and NTP), the state rules without Arduino headers, and the outputs (LCD, LEDs and buzzer). `sketch.ino` only wires them together.
+- One class per responsibility in PascalCase files with include guards: the `AlertPanel` mediator, the Edge HTTP client, the buzzer alarm pattern, and the state rules without Arduino headers. `sketch.ino` only creates the framework Wi-Fi driver and the mediator.
 - Files stay at the repository root so that the project also opens in the Wokwi web editor.
 - Configuration lives in `PanelConfig.h` as `constexpr` values, never as `#define` macros.
-- `loop()` never waits on a timer: periodic work is scheduled with `millis()`, not `delay()`. The only blocking call is the HTTP GET, which stops after `kHttpTimeoutMs`.
+- `loop()` only yields to FreeRTOS. The framework's sampler task refreshes the outputs, and the network task polls the Edge API, so blocking calls stay off the sampler; the HTTP GET stops after `kHttpTimeoutMs`.
 - Comments are in English and short (1–2 lines) and explain why, not what.
 - Every change must compile for `esp32:esp32:esp32` without warnings from the project files.
 - Run the host test of the state rules (`tests/alert_status_test.cpp`, see the README) after any change to `AlertStatus`.

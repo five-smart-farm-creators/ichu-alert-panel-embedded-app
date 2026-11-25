@@ -76,7 +76,7 @@ jobs:
           arduino-cli core update-index
           arduino-cli core install esp32:esp32@3.3.4
           arduino-cli lib update-index
-          arduino-cli lib install ArduinoJson "LiquidCrystal I2C"
+          arduino-cli lib install ArduinoJson "Modest-IoT-Nano-Framework@1.3.0" MQTT
 
       - name: Compile the firmware
         run: |
@@ -226,7 +226,7 @@ jobs:
           arduino-cli core update-index
           arduino-cli core install esp32:esp32@3.3.4
           arduino-cli lib update-index
-          arduino-cli lib install ArduinoJson "LiquidCrystal I2C"
+          arduino-cli lib install ArduinoJson "Modest-IoT-Nano-Framework@1.3.0" MQTT
 
       - name: Compile the firmware
         if: env.WOKWI_CLI_TOKEN != ''
