@@ -3,7 +3,6 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
-#include <WiFi.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -65,34 +64,10 @@ bool readAlert(JsonObject item, AlertEntry& entry) {
 
 }  // namespace
 
-void EdgeAlertClient::begin() {
-    WiFi.mode(WIFI_STA);
-    WiFi.setAutoReconnect(true);
-    WiFi.begin(PanelSecrets::kWifiSsid, PanelSecrets::kWifiPassword);
-    Serial.printf("[wifi] connecting to %s\n", PanelSecrets::kWifiSsid);
-}
-
-void EdgeAlertClient::poll() {
-    const bool connected = isAvailable();
-    if (connected == wasConnected_) {
-        return;
-    }
-    wasConnected_ = connected;
-    if (connected) {
-        Serial.printf("[wifi] connected, IP %s\n", WiFi.localIP().toString().c_str());
-    } else {
-        Serial.println("[wifi] disconnected");
-    }
-}
-
-bool EdgeAlertClient::isAvailable() const {
-    return WiFi.status() == WL_CONNECTED;
-}
-
-bool EdgeAlertClient::fetch(AlertEntry* alerts, size_t capacity, size_t& count) {
-    if (!isAvailable()) {
-        return false;
-    }
+bool EdgeAlertClient::fetch(AlertEntry* alerts, size_t capacity, size_t& count) const {
+    // The key travels as "ApiKey <key>", which the Edge API accepts besides X-API-Key.
+    char authorization[sizeof("ApiKey ") + sizeof(PanelSecrets::kDeviceApiKey)];
+    snprintf(authorization, sizeof(authorization), "ApiKey %s", PanelSecrets::kDeviceApiKey);
     const String url = String(PanelSecrets::kEdgeBaseUrl) + PanelConfig::kAlertsPath +
                        "?device_id=" + PanelConfig::kDeviceId +
                        "&limit=" + String(PanelConfig::kAlertLimit);
@@ -100,7 +75,7 @@ bool EdgeAlertClient::fetch(AlertEntry* alerts, size_t capacity, size_t& count) 
     http.begin(url);
     http.setConnectTimeout(static_cast<int32_t>(PanelConfig::kHttpTimeoutMs));
     http.setTimeout(static_cast<uint16_t>(PanelConfig::kHttpTimeoutMs));
-    http.addHeader("X-API-Key", PanelSecrets::kDeviceApiKey);
+    http.addHeader("Authorization", authorization);
     const int status = http.GET();
     String body;
     if (status == 200) {
