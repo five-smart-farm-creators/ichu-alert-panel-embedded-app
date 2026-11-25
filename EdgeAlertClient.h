@@ -5,17 +5,12 @@
 
 #include "AlertStatus.h"
 
-// Wi-Fi station and the GET of the alert listing; fetch() blocks for at most kHttpTimeoutMs.
+// Reads the alert listing with a plain HTTP GET: HttpGatewayClient keeps only 511 response bytes,
+// and two alerts of the listing already need about 830.
 class EdgeAlertClient {
 public:
-    void begin();
-    void poll();
-    bool isAvailable() const;
-    // Writes the listing only for a readable 200 response, so a failed poll keeps the last one.
-    bool fetch(AlertEntry* alerts, size_t capacity, size_t& count);
-
-private:
-    bool wasConnected_ = false;
+    // Writes the alerts of a readable 200 response and leaves them untouched otherwise.
+    bool fetch(AlertEntry* alerts, size_t capacity, size_t& count) const;
 };
 
 #endif  // EDGE_ALERT_CLIENT_H

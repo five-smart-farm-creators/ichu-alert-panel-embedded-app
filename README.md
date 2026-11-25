@@ -12,6 +12,18 @@ Wokwi cannot simulate the I2C level converter and the 5 V supply of the prototyp
 
 ---
 
+## Architecture
+
+The firmware is built on the [Modest IoT Nano Framework](https://github.com/modest-iot/modest-iot-nano-framework) v1.3.0 (Arduino library `Modest-IoT-Nano-Framework`, which needs `MQTT`).
+
+- `AlertPanel` is a framework `Device` and the mediator. Its sampler task refreshes the outputs every 250 ms: it evaluates `AlertStatus` and drives the LEDs (`Led`), the buzzer (`Buzzer`, through `BuzzerAlarm`) and the LCD (`CharacterLcdDisplay`).
+- The network task runs `maintainNetworkServices()`: it keeps the Wi-Fi connection (`WiFiConnectivityDriver`), requests NTP (`TimeSynchronizationDriver`) and polls the alert listing every 3 s. It hands each listing to the sampler under a mutex.
+- `loop()` only yields to FreeRTOS.
+
+The listing is read with a plain HTTP GET in `EdgeAlertClient`, not with `HttpGatewayClient`. The framework keeps only the first 511 bytes of a response, and a listing with two alerts is about 830 bytes.
+
+---
+
 ## Hardware
 
 | Part | Interface | ESP32 pin | Notes |
@@ -20,7 +32,7 @@ Wokwi cannot simulate the I2C level converter and the 5 V supply of the prototyp
 | Green LED | Digital output | GPIO25 | 220 Ω in series, state Normal |
 | Yellow LED | Digital output | GPIO26 | 220 Ω in series, state Attention |
 | Red LED | Digital output | GPIO27 | 220 Ω in series, state Urgent |
-| Active buzzer KY-012 | Digital output | GPIO14 | Sounds while the pin is HIGH |
+| Active buzzer KY-012 | Digital output | GPIO14 | Driven by the framework `Buzzer` with `tone()` |
 
 The prototype also needs an I2C level converter between the 3.3 V board and the 5 V LCD, and a regulated 5 V supply that shares ground with the board. Wokwi does not simulate either part, so the diagram connects the LCD to the board's 5 V pin.
 
@@ -30,14 +42,13 @@ The prototype also needs an I2C level converter between the 3.3 V board and the 
 
 ```text
 ichu-alert-panel-embedded-app/
-├── sketch.ino                 composition root: setup() and loop()
+├── sketch.ino                 composition root: framework Wi-Fi driver and AlertPanel
 ├── PanelConfig.h              identity, pins, intervals and the alert window
 ├── PanelSecrets.example.h     template for the git-ignored PanelSecrets.h
 ├── AlertStatus.h/.cpp         state rules: NoConnection, Normal, Attention, Urgent
-├── EdgeAlertClient.h/.cpp     Wi-Fi and the GET of the alert listing
-├── PanelClock.h/.cpp          NTP and the check that the clock is valid
-├── StatusIndicator.h/.cpp     LEDs and buzzer, with the non-blocking alarm
-├── StatusDisplay.h/.cpp       16x2 LCD, rewritten only when its text changes
+├── AlertPanel.h/.cpp          Device mediator: outputs in the sampler, polling in the network task
+├── BuzzerAlarm.h/.cpp         30 s alarm pulses for each new Critical alert
+├── EdgeAlertClient.h/.cpp     HTTP GET and parsing of the alert listing
 ├── diagram.json               Wokwi circuit
 ├── libraries.txt              Wokwi library list
 ├── wokwi.toml                 Wokwi for VS Code configuration
@@ -75,7 +86,7 @@ Every change must compile for `esp32:esp32:esp32` without warnings from the proj
 
 ```sh
 arduino-cli core install esp32:esp32@3.3.4
-arduino-cli lib install ArduinoJson "LiquidCrystal I2C"
+arduino-cli lib install ArduinoJson "Modest-IoT-Nano-Framework@1.3.0" MQTT
 mkdir -p ../build-src/sketch
 cp *.ino *.h *.cpp ../build-src/sketch/
 arduino-cli compile --fqbn esp32:esp32:esp32 --warnings all --output-dir build ../build-src/sketch
@@ -83,9 +94,7 @@ arduino-cli compile --fqbn esp32:esp32:esp32 --warnings all --output-dir build .
 
 To flash a board, run `arduino-cli upload --port <port> --fqbn esp32:esp32:esp32 ../build-src/sketch`. The `build/` folder is ignored by Git.
 
-The firmware uses 1081499 bytes of flash (82% of the default 1310720-byte application partition) and 50080 bytes of static RAM (15% of 327680 bytes) with the ESP32 core 3.3.4.
-
-The LiquidCrystal I2C 1.1.2 library prints deprecation warnings for its `B00000001` binary-literal macros, and an `avr` architecture notice, when it is built for `esp32`. Those lines come from the library, not from the project files.
+Flash and RAM use of the framework build is not recorded here yet; the compile log of the `build` job prints both.
 
 ---
 
@@ -109,7 +118,7 @@ The program prints `all alert status checks passed` and exits with 0 when every 
 
 **Wokwi web editor.** Open the published project at <https://wokwi.com/projects/480787196915608577>. The web editor shows the circuit and runs the firmware, but it reaches a local Edge API only with a paid private gateway, so the connected demo runs in Wokwi for VS Code.
 
-`diagram.json` wires the parts of the hardware table to the board. The LCD uses the I2C mode of the Wokwi part, whose default address is 0x27. The Wokwi buzzer sounds when its positive pin is driven HIGH.
+`diagram.json` wires the parts of the hardware table to the board. The LCD uses the I2C mode of the Wokwi part, whose default address is 0x27. The framework's `Buzzer` drives GPIO14 with `tone()` while the alarm sounds.
 
 **Wokwi CI.** Every pull request simulates the panel with `tests/panel-offline.test.yaml`. No Edge API is reachable there, so the scenario checks the Wi-Fi connection, the retry and the NO CONNECTION state with its LEDs off.
 
@@ -129,7 +138,7 @@ The Edge API raises a `Temperature/Critical` alert only when the collar has a sy
 
 The panel reads the alert listing of `ichu-edge-service`:
 
-`GET {kEdgeBaseUrl}/api/v1/monitoring/alerts?device_id={kDeviceId}&limit=20` with the header `X-API-Key: {kDeviceApiKey}`.
+`GET {kEdgeBaseUrl}/api/v1/monitoring/alerts?device_id={kDeviceId}&limit=20` with the header `Authorization: ApiKey {kDeviceApiKey}`. The Edge API also accepts `X-API-Key`.
 
 | Response | Panel behavior |
 | --- | --- |
@@ -144,7 +153,7 @@ From each alert the panel reads `alert_id`, `device_id`, `type`, `severity` and 
 
 ## States
 
-An alert is active when `now - raised_at` is at most 600 s. Until NTP sets the clock (before 2024-01-01 UTC), every alert the panel receives counts as active.
+An alert is active when `now - raised_at` is at most 600 s. Until the framework reports a synchronized clock, every alert the panel receives counts as active.
 
 | State | Report name | Condition | LED | Buzzer | LCD row 1 | LCD row 2 |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -155,7 +164,7 @@ An alert is active when `now - raised_at` is at most 600 s. Until NTP sets the c
 
 - The second row names the most severe active alert and, among equal severities, the newest one. It shows `<Type> <first four characters of device_id>`, for example `Temperature 9d4a`, cut to 16 characters.
 - The buzzer pulses 1 s on and 1 s off for 30 s when the Urgent state shows an alert id that has not sounded yet. The same alert does not sound again, even while the state stays Urgent. Leaving Urgent turns the buzzer off at once.
-- Only one LED is lit at a time. The LCD rewrites a row only when its text changes, padded with spaces to 16 characters.
+- Only one LED is lit at a time. The LCD is rewritten only when its text changes, and the framework pads each row with spaces to 16 characters.
 
 ---
 
@@ -177,11 +186,11 @@ The `[status]` line appears only when the state changes. A failed poll prints it
 ## Known Limitations
 
 - The panel polls every 3 s instead of receiving pushes, so a new alert appears after up to one poll interval plus the request time. This does not meet the J.7 target of 1 s p95 from Edge to the panel.
-- A poll blocks the loop for at most `kHttpTimeoutMs`, so the LED and buzzer pulses pause during that time.
+- A poll blocks the network task for at most `kHttpTimeoutMs`; the outputs keep updating meanwhile.
 - The panel does not remember the alert that sounded before a reboot, so a Critical alert that is still active sounds once more after a restart.
 - Informative alerts do not change the state.
 - The LCD has no text scrolling and there is no button to silence the buzzer.
-- The buzzer trigger level and current draw of the KY-012 module are not verified; the wiring assumes HIGH sounds it.
+- The framework drives the buzzer with `tone()`, a square wave, not a steady HIGH. The KY-012 is an active buzzer, so its loudness and pitch on the prototype are not verified.
 - The level converter and the 5 V supply are not part of the simulation.
 - The physical prototype has not been tested yet.
 

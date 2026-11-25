@@ -10,6 +10,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 - Published Wokwi web project, linked from `wokwi-project.txt` and the README.
 
+### Changed
+
+- Migrated to the Modest IoT Nano Framework v1.3.0: `AlertPanel` is a `Device` mediator, and the LEDs, buzzer, LCD, Wi-Fi and NTP use framework components.
+- The panel authenticates to the Edge API with `Authorization: ApiKey <key>` instead of `X-API-Key`.
+
+### Removed
+
+- The custom LCD, LED, buzzer, Wi-Fi and NTP classes, and the `LiquidCrystal I2C` library.
+
 ## [0.1.1] - 2026-11-14
 
 ### Added
