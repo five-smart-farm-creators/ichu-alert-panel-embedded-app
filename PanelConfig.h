@@ -19,7 +19,7 @@ constexpr char kDeviceId[] = "bf6c7b5d-5c8a-4ba6-8fcc-6a7b8c9daeb5";
 constexpr char kAlertsPath[] = "/api/v1/monitoring/alerts";
 constexpr char kNtpServer[] = "pool.ntp.org";
 // The framework embeds this version in telemetry envelopes, which the panel never sends.
-constexpr char kFirmwareVersion[] = "0.1.1";
+constexpr char kFirmwareVersion[] = "0.2.0";
 
 // The framework LCD and Wire use the ESP32 default I2C bus (SDA GPIO21, SCL GPIO22).
 // Many backpacks ship with 0x3F; change the address when the LCD does not answer.
